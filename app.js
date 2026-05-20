@@ -1263,12 +1263,12 @@
         els.searchInput.value = "";
         els.sortSelect.value = "recent";
         pendingLibraryFocusName = res.name;
+        renderLibrary();
       } else {
         playSuccess();
         if (!auto) showToast(`得到：${res.name}`);
       }
 
-      renderLibrary();
       renderRightPanel();
       save();
 
@@ -1302,6 +1302,7 @@
       const el = it.el;
       let dragging = false;
       let startX = 0, startY = 0, baseX = 0, baseY = 0;
+
       const onDown = (ev) => {
         if (ev.button !== undefined && ev.button !== 0) return;
         dragging = true;
@@ -1312,15 +1313,13 @@
         baseX = it.x;
         baseY = it.y;
       };
+
       const onMove = (ev) => {
         if (!dragging) return;
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        it.x = baseX + dx;
-        it.y = baseY + dy;
+        it.x = baseX + (ev.clientX - startX);
+        it.y = baseY + (ev.clientY - startY);
         positionItem(it);
 
-        // 拖动中：高亮“将要合成”的目标元素
         const r1 = el.getBoundingClientRect();
         let best = null;
         let bestScore = 0;
@@ -1336,11 +1335,13 @@
         if (best && bestScore >= 0.18) setHoverTarget(best.id);
         else clearHoverTarget();
       };
+
       const onUp = () => {
         if (!dragging) return;
         dragging = false;
         el.classList.remove("sticker--dragging");
         clearHoverTarget();
+
         const r1 = el.getBoundingClientRect();
         let best = null;
         let bestScore = 0;
@@ -1351,9 +1352,11 @@
           if (score > bestScore) { bestScore = score; best = other; }
         }
         if (best && bestScore >= 0.22) doCombine(it, best);
+
         updateCounters();
         save();
       };
+
       el.addEventListener("pointerdown", onDown);
       el.addEventListener("pointermove", onMove);
       el.addEventListener("pointerup", onUp);
@@ -1377,13 +1380,47 @@
       `;
       li.querySelector(".libItem__name").textContent = name;
       li.querySelector(".libItem__icon").append(renderIcon({ name, meta, size: 38 }));
-      li.addEventListener("pointerdown", (ev) => beginLibraryDrag(ev, name));
+      
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchTimeout = null;
+      let isDragging = false;
+      let liEl = li;
+
+      const handleTouchStart = (ev) => {
+        touchStartX = ev.touches[0].clientX;
+        touchStartY = ev.touches[0].clientY;
+        isDragging = false;
+
+        touchTimeout = setTimeout(() => {
+          beginLibraryDragFromTouch(ev, name, liEl);
+          isDragging = true;
+        }, 250);
+      };
+
+      const handleTouchMove = (ev) => {
+        const dy = Math.abs(ev.touches[0].clientY - touchStartY);
+
+        if (dy > 15 && touchTimeout) {
+          clearTimeout(touchTimeout);
+          touchTimeout = null;
+        }
+      };
+
+      const handleTouchEnd = () => {
+        if (touchTimeout) {
+          clearTimeout(touchTimeout);
+          touchTimeout = null;
+        }
+        isDragging = false;
+      };
+
       li.addEventListener("click", () => {
+        if (isDragging) return;
         const br = board.getBoundingClientRect();
         const created = spawnOnBoard(name, br.width / 2 - 74, br.height / 2 - 30);
         showToast(`放置：${name}`);
 
-        // 如果与画布元素相交，也触发合成
         const r1 = created.el.getBoundingClientRect();
         let best = null;
         let bestScore = 0;
@@ -1398,12 +1435,112 @@
         }
         if (best && bestScore >= 0.22) doCombine(created, best);
       });
+
+      li.addEventListener("mousedown", (ev) => beginLibraryDrag(ev, name));
+      li.addEventListener("touchstart", handleTouchStart, { passive: true });
+      li.addEventListener("touchmove", handleTouchMove, { passive: true });
+      li.addEventListener("touchend", handleTouchEnd);
       return li;
     }
 
     let ghost = null;
     let ghostName = "";
-    let ghostOffset = { x: 0, y: 0 };
+    let ghostOffset = { x: 74, y: 30 };
+
+    let draggingLi = null;
+
+    function beginLibraryDragFromTouch(ev, name, liEl) {
+      ghostName = name;
+      draggingLi = liEl;
+      
+      const meta = engine.getMeta(name);
+      ghost = document.createElement("div");
+      ghost.className = "sticker sticker--dragging";
+      ghost.style.position = "fixed";
+      ghost.style.left = "-9999px";
+      ghost.style.top = "-9999px";
+      ghost.style.pointerEvents = "none";
+      ghost.style.zIndex = "999";
+      ghost.innerHTML = `
+        <div class="sticker__icon"></div>
+        <div class="sticker__txt">
+          <div class="sticker__name"></div>
+          <div class="sticker__hint">放到画布里</div>
+        </div>
+      `;
+      ghost.querySelector(".sticker__name").textContent = name;
+      ghost.querySelector(".sticker__icon").append(renderIcon({ name, meta, size: 40 }));
+      document.body.appendChild(ghost);
+      
+      if (draggingLi) {
+        draggingLi.style.opacity = "0.3";
+      }
+      
+      const touch = ev.touches[0];
+      moveGhost(touch.clientX, touch.clientY);
+      window.addEventListener("touchmove", onLibTouchMove);
+      window.addEventListener("touchend", onLibTouchEnd, { once: true });
+    }
+
+    function onLibTouchMove(ev) {
+      const touch = ev.touches[0];
+      moveGhost(touch.clientX, touch.clientY);
+      if (!ghost) return;
+      const r1 = ghost.getBoundingClientRect();
+      let best = null;
+      let bestScore = 0;
+      for (const other of items) {
+        const r2 = other.el.getBoundingClientRect();
+        const score = rectOverlapRatio(r1, r2);
+        if (score > bestScore) {
+          bestScore = score;
+          best = other;
+        }
+      }
+      if (best && bestScore >= 0.18) setHoverTarget(best.id);
+      else clearHoverTarget();
+    }
+
+    function onLibTouchEnd(ev) {
+      window.removeEventListener("touchmove", onLibTouchMove);
+      
+      if (draggingLi) {
+        draggingLi.style.opacity = "1";
+        draggingLi = null;
+      }
+      
+      if (!ghost) return;
+      
+      const br = board.getBoundingClientRect();
+      const touch = ev.changedTouches[0];
+      const inside = touch.clientX >= br.left && touch.clientX <= br.right && touch.clientY >= br.top && touch.clientY <= br.bottom;
+      
+      if (inside) {
+        const x = touch.clientX - br.left - 74;
+        const y = touch.clientY - br.top - 30;
+        const created = spawnOnBoard(ghostName, x, y);
+        showToast(`放置：${ghostName}`);
+
+        const r1 = created.el.getBoundingClientRect();
+        let best = null;
+        let bestScore = 0;
+        for (const other of items) {
+          if (other.id === created.id) continue;
+          const r2 = other.el.getBoundingClientRect();
+          const score = rectOverlapRatio(r1, r2);
+          if (score > bestScore) {
+            bestScore = score;
+            best = other;
+          }
+        }
+        if (best && bestScore >= 0.22) doCombine(created, best);
+      }
+      
+      clearHoverTarget();
+      ghost.remove();
+      ghost = null;
+      ghostName = "";
+    }
 
     function beginLibraryDrag(ev, name) {
       if (ev.button !== undefined && ev.button !== 0) return;
@@ -1427,21 +1564,19 @@
       ghost.querySelector(".sticker__name").textContent = name;
       ghost.querySelector(".sticker__icon").append(renderIcon({ name, meta, size: 40 }));
       document.body.appendChild(ghost);
-      ghostOffset = { x: 74, y: 30 };
       moveGhost(ev.clientX, ev.clientY);
-      window.addEventListener("pointermove", onLibMove, { passive: false });
-      window.addEventListener("pointerup", onLibUp, { passive: false, once: true });
+      window.addEventListener("pointermove", onLibMove);
+      window.addEventListener("pointerup", onLibUp, { once: true });
     }
+
     function moveGhost(clientX, clientY) {
       if (!ghost) return;
       ghost.style.left = `${clientX - ghostOffset.x}px`;
       ghost.style.top = `${clientY - ghostOffset.y}px`;
     }
-    function onLibMove(ev) {
-      ev.preventDefault();
-      moveGhost(ev.clientX, ev.clientY);
 
-      // 从元素库拖动时：高亮画布上将要合成的目标贴纸
+    function onLibMove(ev) {
+      moveGhost(ev.clientX, ev.clientY);
       if (!ghost) return;
       const r1 = ghost.getBoundingClientRect();
       let best = null;
@@ -1457,6 +1592,7 @@
       if (best && bestScore >= 0.18) setHoverTarget(best.id);
       else clearHoverTarget();
     }
+
     function onLibUp(ev) {
       window.removeEventListener("pointermove", onLibMove);
       if (!ghost) return;
@@ -1468,7 +1604,6 @@
         const created = spawnOnBoard(ghostName, x, y);
         showToast(`放置：${ghostName}`);
 
-        // 如果与画布元素相交，也触发合成
         const r1 = created.el.getBoundingClientRect();
         let best = null;
         let bestScore = 0;
