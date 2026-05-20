@@ -393,15 +393,17 @@ body{
   /* 主布局 */
   .main{
     grid-template-columns: 1fr;
-    padding: 10px;
-    gap: 10px;
+    grid-template-rows: auto minmax(280px, 1fr) minmax(200px, 35vh) minmax(180px, 30vh);
+    padding: 8px;
+    gap: 8px;
+    height: 100vh;
   }
   
   /* 顶部栏 */
   .topbar{
-    padding: 10px 12px;
+    padding: 8px 10px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
   
   .brand{
@@ -409,69 +411,74 @@ body{
   }
   
   .brand__logo{
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
   }
   
   .brand__title{
-    font-size: 16px;
+    font-size: 15px;
   }
   
   .brand__sub{
-    font-size: 11px;
+    font-size: 10px;
   }
   
   /* 按钮 */
   .topbar__actions{
-    gap: 6px;
+    gap: 5px;
     width: 100%;
     justify-content: space-between;
   }
   
   .btn{
-    padding: 10px 10px;
-    font-size: 12px;
-    border-radius: 12px;
+    padding: 8px 8px;
+    font-size: 11px;
+    border-radius: 10px;
     -webkit-tap-highlight-color: transparent;
   }
   
   .btn--ghost{
-    padding: 10px 8px;
+    padding: 8px 6px;
   }
   
   /* 面板 */
   .panel{
-    max-height: 320px;
+    max-height: none;
+    min-height: 180px;
   }
   
   .panel__header{
-    padding: 10px;
+    padding: 8px;
+    font-size: 14px;
   }
   
   .panel__controls{
-    padding: 8px 10px;
+    padding: 6px 8px;
   }
   
   .library{
-    padding: 8px;
+    padding: 6px;
     -webkit-overflow-scrolling: touch;
+    min-height: 140px;
+    max-height: 35vh;
   }
   
   /* 画布 */
   .boardWrap{
-    min-height: 420px;
+    min-height: 280px;
+    max-height: 45vh;
   }
   
   .boardTop{
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
   
   .tips{
     width: 100%;
-    font-size: 12px;
-    padding: 8px 10px;
+    font-size: 11px;
+    padding: 6px 8px;
   }
   
   .boardStats{
@@ -481,34 +488,34 @@ body{
   
   /* 元素库卡片 */
   .libItem{
-    padding: 10px 10px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  .libItem__icon{
-    width: 34px;
-    height: 34px;
-  }
-  
-  /* 贴纸 */
-  .sticker{
-    min-width: 120px;
-    max-width: 200px;
     padding: 8px 8px;
     -webkit-tap-highlight-color: transparent;
   }
   
+  .libItem__icon{
+    width: 30px;
+    height: 30px;
+  }
+  
+  /* 贴纸 */
+  .sticker{
+    min-width: 110px;
+    max-width: 180px;
+    padding: 6px 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
   .sticker__icon{
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
   
   .sticker__name{
-    font-size: 14px;
+    font-size: 13px;
   }
   
   .sticker__hint{
-    font-size: 11px;
+    font-size: 10px;
   }
   
   /* 对话框 */
@@ -525,16 +532,18 @@ body{
   
   /* 右侧面板 */
   .rightBody{
-    padding: 10px;
+    padding: 8px;
     -webkit-overflow-scrolling: touch;
+    min-height: 140px;
+    max-height: 30vh;
   }
   
   .card{
-    padding: 10px;
+    padding: 8px;
   }
   
   .row{
-    padding: 10px;
+    padding: 8px;
   }
   
   /* 触摸优化 */
@@ -556,27 +565,49 @@ body{
 /* 超小屏适配 */
 @media (max-width: 480px){
   .main{
-    padding: 8px;
+    grid-template-rows: auto minmax(250px, 1fr) minmax(180px, 35vh) minmax(160px, 30vh);
+    padding: 6px;
+    gap: 6px;
   }
   
   .topbar{
-    padding: 8px 10px;
+    padding: 6px 8px;
+  }
+  
+  .brand__logo{
+    width: 28px;
+    height: 28px;
+  }
+  
+  .brand__title{
+    font-size: 14px;
   }
   
   .btn{
-    font-size: 11px;
-    padding: 9px 8px;
+    font-size: 10px;
+    padding: 7px 7px;
   }
   
   .panel{
-    max-height: 280px;
+    min-height: 160px;
+  }
+  
+  .library{
+    min-height: 120px;
+    max-height: 35vh;
   }
   
   .boardWrap{
-    min-height: 360px;
+    min-height: 250px;
+    max-height: 45vh;
   }
   
   .sticker{
-    min-width: 110px;
+    min-width: 100px;
+  }
+  
+  .rightBody{
+    min-height: 120px;
+    max-height: 30vh;
   }
 }
